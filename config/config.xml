@@ -1,0 +1,27 @@
+<configurazione>
+    <server>
+        <host>localhost</host>
+        <porta>8080</porta>
+        <maxThread>10</maxThread>
+    </server>
+
+    <database>
+        <url>jdbc:mysql://localhost:3306/biblioteca</url>
+        <username>root</username>
+        <password>30Settembre2023@</password>
+        <driver>com.mysql.cj.jdbc.Driver</driver>
+    </database>
+
+    <prestito>
+        <DurataGiorniPerLibro>14</DurataGiorniPerLibro>
+        <DurataGiorniPerRivista>7</DurataGiorniPerRivista>
+        <MaxPerUtente>3</MaxPerUtente>
+    </prestito>
+
+    <penali>
+        <PenaleLibGiorno>0.50</PenaleLibGiorno>
+        <PenaleRivGiorno>1</PenaleRivGiorno>
+    </penali>
+
+
+</configurazione>
