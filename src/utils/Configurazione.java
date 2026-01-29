@@ -1,6 +1,7 @@
 package utils;
 
 public class Configurazione {
+    private static Configurazione instance;
     private String hostServer;
     private int portaServer;
     private int maxThread;
@@ -16,7 +17,16 @@ public class Configurazione {
     
     public Configurazione() {
     }
-    
+    public static Configurazione getInstance() {
+        if (instance == null) {
+            try {
+                instance = XMLConfigParser.leggiConfigurazione("config/config.xml");
+            } catch (Exception e) {
+                System.err.println("Errore caricamento configurazione: " + e.getMessage());
+            }
+        }
+        return instance;
+    }
     public String getHostServer() {
         return hostServer;
     }

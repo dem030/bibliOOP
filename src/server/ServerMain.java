@@ -37,6 +37,7 @@ public class ServerMain {
 
     public void main(String[] args) {
         try {
+            Configurazione config = Configurazione.getInstance();
             XMLConfigParser.leggiConfigurazione("../../config/config.xml");
             dbManager = DataBaseManager.getIstance();
             dbManager.inizializza(config.getDbUrl(), config.getDbUsername(), config.getDbPassword());

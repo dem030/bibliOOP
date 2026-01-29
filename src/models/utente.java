@@ -8,7 +8,7 @@ public class utente {
     private String nome;
     private String cognome;
     private String email;
-    private enum ruoloUtente {ADMIN, USER};
+    public enum ruoloUtente {ADMIN, USER};
     private ruoloUtente ruoloUtente;
     private boolean Bloccato;
     public int getId_ut() {
@@ -65,8 +65,17 @@ public class utente {
     public void setRuoloUtente(ruoloUtente ruoloUtente) {
         this.ruoloUtente = ruoloUtente;
     }
-    public boolean validaCodiceFiscale(String codice_fiscale) {
-        // da prendere da db
-        return false;
+    public boolean validaCodiceFiscale() {
+        if (this.codice_fiscale == null) {
+            return false;
+        }else if (this.codice_fiscale.length() != 16) {
+            return false;
+        } 
+        for (char c : this.codice_fiscale.toCharArray()) {
+            if (!Character.isLetterOrDigit(c)) {
+                return false;
+            }
+        }
+        return true;
     }
 }
