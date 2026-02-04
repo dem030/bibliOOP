@@ -2,13 +2,15 @@ package server;
 import utils.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.concurrent.Executor;
+import java.sql.SQLException;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 
+
 public class ServerMain {
-    private int porta;
     private int maxThread;
     ExecutorService threadPool;
+    ClientHandler clientHandler;
     ServerSocket serverSocket;
     Configurazione config;
     DataBaseManager dbManager;
@@ -26,10 +28,18 @@ public class ServerMain {
                 threadPool.shutdownNow();
             }
             if (serverSocket != null && !serverSocket.isClosed()) {
-                serverSocket.close();
+                try {
+                    serverSocket.close();
+                } catch (Exception e) {
+                    System.err.println("Errore durante la chiusura del server: " + e.getMessage());
+                }
             }
             if (dbManager != null) {
-                dbManager.closeConnection();
+                try{
+                dbManager.chiudiConnessione();
+                } catch (SQLException e) {
+                    System.err.println("Errore durante la chiusura della connessione al database: " + e.getMessage());
+                }
                 
             }
         }
@@ -39,14 +49,14 @@ public class ServerMain {
         try {
             Configurazione config = Configurazione.getInstance();
             XMLConfigParser.leggiConfigurazione("../../config/config.xml");
-            dbManager = DataBaseManager.getIstance();
+            dbManager = DataBaseManager.getInstance();
             dbManager.inizializza(config.getDbUrl(), config.getDbUsername(), config.getDbPassword());
-            threadPool = Executor.newFixedThreadPool(maxThread);
+            threadPool = Executors.newFixedThreadPool(maxThread);
             serverSocket = new ServerSocket(config.getPortaServer());
             inEsecuzione = true;
             while (inEsecuzione) {
                 Socket clientSocket = serverSocket.accept();
-                CLientHandler clientHandler = new ClientHandler(clientSocket, config);
+                clientHandler = new ClientHandler(clientSocket, config);
                 threadPool.submit(clientHandler);
 
             }

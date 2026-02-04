@@ -1,6 +1,6 @@
 package models;
 
-public class utente {
+public class Utente{
     private int id_ut;
     private String codice_fiscale;
     private String username;
@@ -8,6 +8,7 @@ public class utente {
     private String nome;
     private String cognome;
     private String email;
+    private String telefono;
     public enum ruoloUtente {ADMIN, USER};
     private ruoloUtente ruoloUtente;
     private boolean Bloccato;
@@ -31,6 +32,9 @@ public class utente {
     }
     public String getEmail() {
         return email;
+    }
+    public String getTelefono() {
+        return telefono;
     }
     public boolean isBloccato() {
         return Bloccato;
@@ -64,6 +68,9 @@ public class utente {
     }
     public void setRuoloUtente(ruoloUtente ruoloUtente) {
         this.ruoloUtente = ruoloUtente;
+    }
+    public void setTelefono(String telefono) {
+        this.telefono = telefono;
     }
     public boolean validaCodiceFiscale() {
         if (this.codice_fiscale == null) {

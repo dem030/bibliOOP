@@ -1,53 +1,130 @@
 package models;
-import java.util.Date;
-public class prestito {
-    private int prest_id;
-    private int utente_id;
-    private int materiale_id;
-    public Date data_prestito;
-    public Date data_restituzione;
-    public boolean restituito;
+
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+
+public class Prestito {  
+    private int id;
+    private Utente utente;  
+    private Materiale materiale;  
+    private LocalDate dataPrestito;  
+    private LocalDate dataScadenza;
+    private LocalDate dataRestituzione;
+    private boolean rinnovato;
+    private double penale;
     
-    public int getPrest_id() {
-        return prest_id;
+    
+    public Prestito() {
     }
-    public int getUtente_id() {
-        return utente_id;
+    
+    
+    public int getId() {
+        return id;
     }
-    public int getMateriale_id() {
-        return materiale_id;
+    
+    public void setId(int id) {
+        this.id = id;
     }
-    public int setPrest_id(int prest_id) {
-        return this.prest_id = prest_id;
+    
+    public Utente getUtente() {
+        return utente;
     }
-    public int setUtente_id(int utente_id) {
-        return this.utente_id = utente_id;
+    
+    public void setUtente(Utente utente) {
+        this.utente = utente;
     }
-    public int setMateriale_id(int materiale_id) {
-        return this.materiale_id = materiale_id;
+    
+    public Materiale getMateriale() {
+        return materiale;
     }
-    public double calcolaPenale(int giorniRitardo, double penaleGiornaliera) {
-        return (int)(giorniRitardo * penaleGiornaliera);
+    
+    public void setMateriale(Materiale materiale) {
+        this.materiale = materiale;
     }
+    
+    public LocalDate getDataPrestito() {
+        return dataPrestito;
+    }
+    
+    public void setDataPrestito(LocalDate dataPrestito) {
+        this.dataPrestito = dataPrestito;
+    }
+    
+    public LocalDate getDataScadenza() {
+        return dataScadenza;
+    }
+    
+    public void setDataScadenza(LocalDate dataScadenza) {
+        this.dataScadenza = dataScadenza;
+    }
+    
+    public LocalDate getDataRestituzione() {
+        return dataRestituzione;
+    }
+    
+    public void setDataRestituzione(LocalDate dataRestituzione) {
+        this.dataRestituzione = dataRestituzione;
+    }
+    
+    public boolean isRinnovato() {
+        return rinnovato;
+    }
+    
+    public void setRinnovato(boolean rinnovato) {
+        this.rinnovato = rinnovato;
+    }
+    
+    public double getPenale() {
+        return penale;
+    }
+    
+    public void setPenale(double penale) {
+        this.penale = penale;
+    }
+    
+    
+    
     public boolean isInRitardo() {
-        Date today = new Date();
-        if (today.after(data_restituzione) && !restituito) {
-            return true;
-        } else {
-            return false;
+        if (dataRestituzione != null) {
+            return false;  
         }
-    }
-    public double getGiorniRitardo() {
-         return (new Date().getTime() - data_restituzione.getTime()) / (1000 * 60 * 60 * 24);
-    }
-
-    public boolean rinnova(){
-        if(!isInRitardo()){
-            // estendi la data di restituzione in base al tipo di materiale
-
-            return true;
-        }
-        return false;
+        LocalDate oggi = LocalDate.now();
+        return oggi.isAfter(dataScadenza);
     }
     
+    public int getGiorniRitardo() {
+        if (dataRestituzione != null) {
+            
+            if (dataRestituzione.isAfter(dataScadenza)) {
+                return (int) ChronoUnit.DAYS.between(dataScadenza, dataRestituzione);
+            }
+            return 0;
+        } else {
+            
+            LocalDate oggi = LocalDate.now();
+            if (oggi.isAfter(dataScadenza)) {
+                return (int) ChronoUnit.DAYS.between(dataScadenza, oggi);
+            }
+            return 0;
+        }
+    }
+    
+    public double calcolaPenale(double penaleGiornaliera) {
+        int giorniRitardo = getGiorniRitardo();
+        if (giorniRitardo > 0 && materiale != null) {
+            return materiale.calcolaPenale(giorniRitardo, penaleGiornaliera);
+        }
+        return 0.0;
+    }
+    
+    public void rinnova(int giorniAggiuntivi) throws Exception {
+        if (rinnovato) {
+            throw new Exception("Prestito già rinnovato");
+        }
+        if (isInRitardo()) {
+            throw new Exception("Non puoi rinnovare un prestito in ritardo");
+        }
+        this.dataScadenza = this.dataScadenza.plusDays(giorniAggiuntivi);
+        this.rinnovato = true;
+    }
 }

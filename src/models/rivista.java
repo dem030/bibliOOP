@@ -33,7 +33,7 @@ public class Rivista extends Materiale {
     }
     
     @Override
-    public int getDurataMassimaPrestito() {  // ✅ STESSO NOME di Materiale
+    public int getDurataMassimaPrestito() {  
         return Configurazione.getInstance().getDurataPrestitoRivista();
     }
 }
