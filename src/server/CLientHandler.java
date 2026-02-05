@@ -35,7 +35,6 @@ public class ClientHandler implements Runnable {
             out.flush();
             in = new ObjectInputStream(socket.getInputStream());
 
-            System.out.println("Client connesso: " + socket.getInetAddress());
 
             while (inEsecuzione) {
                 try {
@@ -51,7 +50,7 @@ public class ClientHandler implements Runnable {
                     out.flush();
 
                 } catch (IOException | ClassNotFoundException e) {
-                    System.err.println("Errore comunicazione: " + e.getMessage());
+                    // Client disconnesso, uscita silenziosa
                     break;
                 }
             }
@@ -151,6 +150,7 @@ public class ClientHandler implements Runnable {
             u.setNome(dati[3]);
             u.setCognome(dati[4]);
             u.setEmail(dati[5]);
+            u.setTelefono(dati[6]);
 
             int id = dbManager.registraUtente(u);
             return "OK:Registrazione completata. ID=" + id;
@@ -299,7 +299,7 @@ public class ClientHandler implements Runnable {
             return "ERRORE:Operazione non consentita";
 
         try {
-            List<Prestito> prestiti = dbManager.getPrestiti(0);
+            List<Prestito> prestiti = dbManager.getTuttiPrestiti();
             StringBuilder sb = new StringBuilder("OK:");
 
             for (Prestito p : prestiti) {
@@ -356,20 +356,37 @@ public class ClientHandler implements Runnable {
     }
 
     private String serializeMateriale(Materiale m) {
-        String base = m.getId_pz() + ";" + (m instanceof Libro ? "LIBRO" : "RIVISTA") + ";" + m.getTitolo() + ";" + m.getAutore() + ";" + m.isDisponibile();
+        String tipo = (m instanceof Libro) ? "LIBRO" : "RIVISTA";
+        String disponibile = m.isDisponibile() ? "Si" : "No";
+
+        String result = "ID: " + m.getId_pz() + ";" +
+                       "Tipo: " + tipo + ";" +
+                       "Titolo: " + m.getTitolo() + ";" +
+                       "Autore: " + m.getAutore() + ";" +
+                       "Disponibile: " + disponibile + ";";
 
         if (m instanceof Libro) {
             Libro l = (Libro) m;
-            base += ";" + l.getIsbn() + ";" + l.getAnnoPubblicazione();
+            result += "ISBN: " + l.getIsbn() + ";" +
+                     "Anno: " + l.getAnnoPubblicazione();
         } else {
             Rivista r = (Rivista) m;
-            base += ";" + r.getNumeroEdizione() + ";" + r.getAnnoPubblicazione();
+            result += "Num. Edizione: " + r.getNumeroEdizione() + ";" +
+                     "Anno: " + r.getAnnoPubblicazione();
         }
-        return base;
+        return result;
     }
 
     private String serializePrestito(Prestito p) {
-        return p.getId() + ";" + p.getUtente().getId_ut() + ";" + p.getUtente().getUsername() + ";" + p.getMateriale().getId_pz() + ";" + p.getMateriale().getTitolo() + ";" + p.getDataPrestito() + ";" + p.getDataScadenza() + ";" + (p.getDataRestituzione() != null ? p.getDataRestituzione() : "null") + ";" + p.getPenale();
+        String stato = (p.getDataRestituzione() != null) ? "RESTITUITO" : "IN CORSO";
+        return "ID Prestito: " + p.getId() + ";" +
+               "Utente: " + p.getUtente().getUsername() + " (ID: " + p.getUtente().getId_ut() + ");" +
+               "Materiale: " + p.getMateriale().getTitolo() + " (ID: " + p.getMateriale().getId_pz() + ");" +
+               "Data Prestito: " + p.getDataPrestito() + ";" +
+               "Data Scadenza: " + p.getDataScadenza() + ";" +
+               "Data Restituzione: " + (p.getDataRestituzione() != null ? p.getDataRestituzione() : "-") + ";" +
+               "Stato: " + stato + ";" +
+               "Penale: " + p.getPenale() + " EUR";
     }
 
     private void chiudiConnessione() {
@@ -377,7 +394,6 @@ public class ClientHandler implements Runnable {
             if (in != null) in.close();
             if (out != null) out.close();
             if (socket != null && !socket.isClosed()) socket.close();
-            System.out.println("Connessione chiusa: " + socket.getInetAddress());
         } catch (IOException e) {
             System.err.println("Errore chiusura connessione: " + e.getMessage());
         }

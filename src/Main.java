@@ -83,7 +83,7 @@ public class Main {
                 
                 // Leggi configurazione
                 config = XMLConfigParser.leggiConfigurazione("config/config.xml");
-                System.out.println("✓ Configurazione caricata");
+                System.out.println(" Configurazione caricata");
                 
                 // Inizializza database
                 DataBaseManager dbManager = DataBaseManager.getInstance();
@@ -92,23 +92,22 @@ public class Main {
                     config.getDbUsername(),
                     config.getDbPassword()
                 );
-                System.out.println("✓ Database connesso");
+                System.out.println(" Database connesso");
                 
                 // Crea ThreadPool
                 threadPool = Executors.newFixedThreadPool(config.getMaxThread());
-                System.out.println("✓ ThreadPool creato");
+                System.out.println(" ThreadPool creato");
                 
                 // Avvia ServerSocket
                 serverSocket = new ServerSocket(config.getPortaServer());
                 serverAvviato = true;
-                System.out.println("✓ Server avviato sulla porta " + config.getPortaServer());
+                System.out.println(" Server avviato sulla porta " + config.getPortaServer());
                 System.out.println();
                 
                 // Loop accettazione client (in background)
                 while (serverAvviato) {
                     try {
                         Socket clientSocket = serverSocket.accept();
-                        System.out.println("[Server] Client connesso: " + clientSocket.getInetAddress());
                         
                         // Crea handler (lo implementeremo dopo)
                         ClientHandler handler = new ClientHandler(clientSocket, config);
@@ -159,7 +158,7 @@ public class Main {
             String risposta = (String) in.readObject();
             
             if (risposta.startsWith("OK:")) {
-                System.out.println("✓ Login effettuato!");
+                System.out.println(" Login effettuato!");
                 System.out.println();
                 
                 // Avvia sessione utente
@@ -167,7 +166,7 @@ public class Main {
                 
             } else {
                 String errore = risposta.substring(7);
-                System.out.println("✗ Login fallito: " + errore);
+                System.out.println(" Login fallito: " + errore);
                 socket.close();
             }
             
@@ -255,7 +254,7 @@ public class Main {
             }
             
             socket.close();
-            System.out.println("✓ Logout effettuato");
+            System.out.println(" Logout effettuato");
             
         } catch (Exception e) {
             System.err.println("Errore: " + e.getMessage());
@@ -296,12 +295,12 @@ public class Main {
                 String ruolo = parti[4];
                 
                 if (!ruolo.equals("ADMIN")) {
-                    System.out.println("✗ Accesso negato: non sei un amministratore");
+                    System.out.println(" Accesso negato: non sei un amministratore");
                     socket.close();
                     return;
                 }
                 
-                System.out.println("✓ Login amministratore effettuato!");
+                System.out.println(" Login amministratore effettuato!");
                 System.out.println();
                 
                 // Avvia sessione admin
@@ -309,7 +308,7 @@ public class Main {
                 
             } else {
                 String errore = risposta.substring(7);
-                System.out.println("✗ Login fallito: " + errore);
+                System.out.println(" Login fallito: " + errore);
                 socket.close();
             }
             
@@ -427,14 +426,15 @@ public class Main {
             }
             
             socket.close();
-            System.out.println("✓ Logout effettuato");
+            System.out.println(" Logout effettuato");
             
         } catch (Exception e) {
             System.err.println("Errore: " + e.getMessage());
         }
     }
     
-    // Registrazione nuovo utente
+    // 3
+    // istrazione nuovo utente
     private static void registrazioneNuovoUtente() {
         Scanner scanner = new Scanner(System.in);
         
@@ -445,7 +445,7 @@ public class Main {
             String cf = scanner.nextLine().toUpperCase();
             
             if (cf.length() != 16) {
-                System.out.println("✗ Codice fiscale deve essere di 16 caratteri");
+                System.out.println(" Codice fiscale deve essere di 16 caratteri");
                 return;
             }
             
@@ -463,10 +463,25 @@ public class Main {
             
             System.out.print("Email: ");
             String email = scanner.nextLine();
-            
+
             System.out.print("Telefono: ");
             String telefono = scanner.nextLine();
-            
+
+            // Validazione email e telefono
+            models.Utente tempUtente = new models.Utente();
+            tempUtente.setEmail(email);
+            tempUtente.setTelefono(telefono);
+
+            if (!tempUtente.validaEmail()) {
+                System.out.println(" Email non valida (formato: esempio@dominio.com)");
+                return;
+            }
+
+            if (!tempUtente.validaTelefono()) {
+                System.out.println(" Telefono non valido (9-15 cifre, può iniziare con +)");
+                return;
+            }
+
             // Connessione al server
             Socket socket = new Socket("localhost", config.getPortaServer());
             ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
@@ -474,8 +489,7 @@ public class Main {
             ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
             
             // Invia comando registrazione
-            String comando = "REGISTRAZIONE:" + cf + ";" + username + ";" + password + ";" + 
-                           nome + ";" + cognome + ";" + email + ";" + telefono;
+            String comando = "REGISTRAZIONE:" + cf + ";" + username + ";" + password + ";" +  nome + ";" + cognome + ";" + email + ";" + telefono;
             out.writeObject(comando);
             out.flush();
             
@@ -483,11 +497,11 @@ public class Main {
             String risposta = (String) in.readObject();
             
             if (risposta.startsWith("OK:")) {
-                System.out.println("✓ Registrazione completata!");
+                System.out.println(" Registrazione completata!");
                 System.out.println("Ora puoi effettuare il login come utente");
             } else {
                 String errore = risposta.substring(7);
-                System.out.println("✗ Registrazione fallita: " + errore);
+                System.out.println(" Registrazione fallita: " + errore);
             }
             
             socket.close();
@@ -519,12 +533,12 @@ public class Main {
                     System.out.println("----------------------------------------");
                 }
             } else {
-                System.out.println("✓ " + dati);
+                System.out.println(" " + dati);
             }
             
         } else if (risposta.startsWith("ERRORE:")) {
             String errore = risposta.substring(7);
-            System.out.println("✗ " + errore);
+            System.out.println(" " + errore);
         }
     }
     
@@ -541,7 +555,7 @@ public class Main {
                 serverSocket.close();
             }
             
-            System.out.println("✓ Server chiuso");
+            System.out.println(" Server chiuso");
             
         } catch (IOException e) {
             System.err.println("Errore chiusura server: " + e.getMessage());

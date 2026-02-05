@@ -9,7 +9,7 @@ public class Utente{
     private String cognome;
     private String email;
     private String telefono;
-    public enum ruoloUtente {ADMIN, USER};
+    public enum ruoloUtente {USER, ADMIN};
     private ruoloUtente ruoloUtente;
     private boolean Bloccato;
     public int getId_ut() {
@@ -77,9 +77,47 @@ public class Utente{
             return false;
         }else if (this.codice_fiscale.length() != 16) {
             return false;
-        } 
+        }
         for (char c : this.codice_fiscale.toCharArray()) {
             if (!Character.isLetterOrDigit(c)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean validaEmail() {
+        if (this.email == null || this.email.isEmpty()) {
+            return false;
+        }
+        // Controlla formato base: qualcosa@qualcosa.qualcosa
+        int atIndex = this.email.indexOf('@');
+        if (atIndex <= 0) {
+            return false;
+        }
+        int dotIndex = this.email.lastIndexOf('.');
+        if (dotIndex <= atIndex + 1 || dotIndex == this.email.length() - 1) {
+            return false;
+        }
+        return true;
+    }
+
+    public boolean validaTelefono() {
+        if (this.telefono == null || this.telefono.isEmpty()) {
+            return false;
+        }
+        // Rimuovi spazi e trattini
+        String tel = this.telefono.replaceAll("[\\s-]", "");
+        // Può iniziare con +
+        if (tel.startsWith("+")) {
+            tel = tel.substring(1);
+        }
+        // Deve contenere solo cifre e avere lunghezza 9-15
+        if (tel.length() < 9 || tel.length() > 15) {
+            return false;
+        }
+        for (char c : tel.toCharArray()) {
+            if (!Character.isDigit(c)) {
                 return false;
             }
         }

@@ -10,7 +10,6 @@ import utils.*;
 
 public class DataBaseManager {
 
-    // ==================== SINGLETON ====================
 
     private static DataBaseManager instance;
 
@@ -41,7 +40,7 @@ public class DataBaseManager {
             Class.forName("com.mysql.cj.jdbc.Driver"); // driver MySQL [web:22][web:25]
             connection = DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
 
-            System.out.println("✓ Connessione database stabilita");
+            System.out.println(" Connessione database stabilita");
         } catch (SQLException e) {
             System.err.println("Errore connessione DB: " + e.getMessage());
             throw new Exception("Impossibile connettersi al database", e);
@@ -58,7 +57,7 @@ public class DataBaseManager {
     public void chiudiConnessione() throws SQLException {
         if (connection != null && !connection.isClosed()) {
             connection.close();
-            System.out.println("✓ Connessione chiusa");
+            System.out.println(" Connessione chiusa");
         }
     }
 
@@ -66,43 +65,43 @@ public class DataBaseManager {
 
     // Registra utente
     public int registraUtente(Utente utente) throws Exception {
-        String query = "INSERT INTO utente " +
-                "(codice_fiscale, username, password, nome, cognome, email, telefono, ruolo) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-
-        try (PreparedStatement stmt = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) { // RETURN_GENERATED_KEYS [web:16][web:19]
-            // Valida codice fiscale
-            if (!utente.validaCodiceFiscale()) {
-                throw new CodiceFiscaleNonValido("Codice fiscale non valido");
-            }
-
-            stmt.setString(1, utente.getCodice_fiscale());
-            stmt.setString(2, utente.getUsername());
-            stmt.setString(3, utente.getPassword());
-            stmt.setString(4, utente.getNome());
-            stmt.setString(5, utente.getCognome());
-            stmt.setString(6, utente.getEmail());
-            stmt.setString(7, utente.getTelefono());
-            stmt.setString(8, "UTENTE");
-
-            stmt.executeUpdate();
-
-            try (ResultSet rs = stmt.getGeneratedKeys()) {
-                int idGenerato = 0;
-                if (rs.next()) {
-                    idGenerato = rs.getInt(1);
-                }
-                return idGenerato;
-            }
-        } catch (SQLException e) {
-            String messaggioErrore = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
-            if (messaggioErrore.contains("duplicate") || messaggioErrore.contains("unique")) {
-                throw new Exception("Username o codice fiscale già esistente", e);
-            } else {
-                throw new Exception("Errore registrazione: " + e.getMessage(), e);
-            }
+    try {
+        if (!utente.validaCodiceFiscale()) {
+            throw new CodiceFiscaleNonValido("Codice fiscale non valido");
+        }
+        
+        String query = "INSERT INTO utente (cod_fiscale, username, password, nome, cognome, email, telefono, ruolo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        
+        PreparedStatement stmt = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+        stmt.setString(1, utente.getCodice_fiscale());
+        stmt.setString(2, utente.getUsername());
+        stmt.setString(3, utente.getPassword());
+        stmt.setString(4, utente.getNome());
+        stmt.setString(5, utente.getCognome());
+        stmt.setString(6, utente.getEmail());
+        stmt.setLong(7, Long.parseLong(utente.getTelefono())); // telefono è BIGINT nel DB
+        stmt.setString(8, "USER"); // ✅ USER non UTENTE
+        
+        stmt.executeUpdate();
+        
+        ResultSet rs = stmt.getGeneratedKeys();
+        int idGenerato = 0;
+        if (rs.next()) {
+            idGenerato = rs.getInt(1);
+        }
+        
+        stmt.close();
+        return idGenerato;
+        
+    } catch (SQLException e) {
+        String messaggioErrore = e.getMessage().toLowerCase();
+        if (messaggioErrore.contains("duplicate entry") || messaggioErrore.contains("unique")) {
+            throw new Exception("Username o codice fiscale già esistente");
+        } else {
+            throw new Exception("Errore registrazione: " + e.getMessage());
         }
     }
+}
 
     // Autentica utente
     public Utente autenticaUtente(String username, String password) throws Exception {
@@ -119,8 +118,8 @@ public class DataBaseManager {
                     }
 
                     Utente u = new Utente();
-                    u.setId_ut(rs.getInt("id"));
-                    u.setCodice_fiscale(rs.getString("codice_fiscale"));
+                    u.setId_ut(rs.getInt("id_ut"));
+                    u.setCodice_fiscale(rs.getString("cod_fiscale"));
                     u.setUsername(rs.getString("username"));
                     u.setPassword(rs.getString("password"));
                     u.setNome(rs.getString("nome"));
@@ -143,53 +142,58 @@ public class DataBaseManager {
 
     // Cerca materiale
     public List<Materiale> cercaMateriale(String query) throws Exception {
-        List<Materiale> listaMateriali = new ArrayList<>();
-
+    List<Materiale> listaMateriali = new ArrayList<>();
+    
+    try {
         String sql = "SELECT * FROM materiale WHERE titolo LIKE ? OR autore LIKE ?";
-
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            String like = "%" + query + "%";
-            stmt.setString(1, like);
-            stmt.setString(2, like);
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    String tipo = rs.getString("tipo");
-
-                    if ("LIBRO".equals(tipo)) {
-                        Libro libro = new Libro();
-                        libro.setID_pz(rs.getInt("id"));
-                        libro.setTitolo(rs.getString("titolo"));
-                        libro.setAutore(rs.getString("autore"));
-                        libro.setIsbn(rs.getString("isbn"));
-                        libro.setAnnoPubblicazione(rs.getInt("anno_pubblicazione"));
-                        libro.setDisponibile(rs.getBoolean("disponibile"));
-                        listaMateriali.add(libro);
-                    } else if ("RIVISTA".equals(tipo)) {
-                        Rivista rivista = new Rivista();
-                        rivista.setID_pz(rs.getInt("id"));
-                        rivista.setTitolo(rs.getString("titolo"));
-                        rivista.setAutore(rs.getString("autore"));
-                        rivista.setNumeroEdizione(rs.getInt("numero_edizione"));
-                        rivista.setAnnoPubblicazione(rs.getInt("anno_pubblicazione"));
-                        rivista.setDisponibile(rs.getBoolean("disponibile"));
-                        listaMateriali.add(rivista);
-                    }
-                }
+        
+        PreparedStatement stmt = connection.prepareStatement(sql);
+        stmt.setString(1, "%" + query + "%");
+        stmt.setString(2, "%" + query + "%");
+        
+        ResultSet rs = stmt.executeQuery();
+        
+        while (rs.next()) {
+            String tipo = rs.getString("tipo");
+            
+            if (tipo.equals("LIBRO")) {
+                Libro libro = new Libro();
+                libro.setID_pz(rs.getInt("id_pz")); 
+                libro.setTitolo(rs.getString("titolo"));
+                libro.setAutore(rs.getString("autore"));
+                libro.setIsbn(rs.getString("isbn"));
+                libro.setAnnoPubblicazione(rs.getInt("anno_pub"));
+                libro.setDisponibile(rs.getBoolean("disp"));
+                
+                listaMateriali.add(libro);
+                
+            } else if (tipo.equals("RIVISTA")) {
+                Rivista rivista = new Rivista();
+                rivista.setID_pz(rs.getInt("id_pz")); 
+                rivista.setTitolo(rs.getString("titolo"));
+                rivista.setAutore(rs.getString("autore"));
+                rivista.setNumeroEdizione(rs.getInt("ed_num")); 
+                rivista.setAnnoPubblicazione(rs.getInt("anno_pub")); 
+                rivista.setDisponibile(rs.getBoolean("disp")); 
+                
+                listaMateriali.add(rivista);
             }
-
-            return listaMateriali;
-        } catch (SQLException e) {
-            System.err.println("Errore ricerca: " + e.getMessage());
-            throw new Exception("Errore durante la ricerca dei materiali", e);
         }
+        
+        stmt.close();
+        return listaMateriali;
+        
+    } catch (SQLException e) {
+        System.err.println("Errore ricerca: " + e.getMessage());
+        throw new Exception("Errore durante la ricerca dei materiali");
     }
+}
 
     // Prenota materiale (synchronized per evitare race condition)
     public synchronized Prestito prenotaMateriale(int idUtente, int idMateriale, Configurazione config) throws Exception {
         try {
             // STEP 1: Verifica disponibilità materiale
-            String query1 = "SELECT * FROM materiale WHERE id = ?";
+            String query1 = "SELECT * FROM materiale WHERE id_pz = ?";
             String tipo;
 
             try (PreparedStatement stmt1 = connection.prepareStatement(query1)) {
@@ -198,7 +202,7 @@ public class DataBaseManager {
                     if (!rs1.next()) {
                         throw new MaterialeNonTrovato(idMateriale);
                     }
-                    if (!rs1.getBoolean("disponibile")) {
+                    if (!rs1.getBoolean("disp")) {
                         throw new LibroNonDisponibile("Materiale non disponibile");
                     }
                     tipo = rs1.getString("tipo");
@@ -206,8 +210,7 @@ public class DataBaseManager {
             }
 
             // STEP 2: Verifica limite prestiti utente
-            String query2 = "SELECT COUNT(*) as conteggio FROM prestito " +
-                            "WHERE id_utente = ? AND data_restituzione IS NULL";
+            String query2 = "SELECT COUNT(*) as conteggio FROM prestito WHERE ut_id = ? AND rest_data IS NULL";
 
             try (PreparedStatement stmt2 = connection.prepareStatement(query2)) {
                 stmt2.setInt(1, idUtente);
@@ -223,14 +226,11 @@ public class DataBaseManager {
 
             // STEP 3: Calcola date
             LocalDate dataOggi = LocalDate.now();
-            int durataGiorni = "LIBRO".equals(tipo)
-                    ? config.getDurataPrestitoLibro()
-                    : config.getDurataPrestitoRivista();
+            int durataGiorni = "LIBRO".equals(tipo) ? config.getDurataPrestitoLibro() : config.getDurataPrestitoRivista();
             LocalDate dataScadenza = dataOggi.plusDays(durataGiorni);
 
             // STEP 4: Inserisci prestito
-            String query3 = "INSERT INTO prestito (id_utente, id_materiale, data_prestito, data_scadenza) " +
-                            "VALUES (?, ?, ?, ?)";
+            String query3 = "INSERT INTO prestito (ut_id, mat_id,prest_data, scad_data) VALUES (?, ?, ?, ?)";
             int idPrestito = 0;
 
             try (PreparedStatement stmt3 = connection.prepareStatement(query3, Statement.RETURN_GENERATED_KEYS)) {
@@ -248,7 +248,7 @@ public class DataBaseManager {
             }
 
             // STEP 5: Aggiorna disponibilità
-            String query4 = "UPDATE materiale SET disponibile = FALSE WHERE id = ?";
+            String query4 = "UPDATE materiale SET disp = FALSE WHERE id_pz = ?";
             try (PreparedStatement stmt4 = connection.prepareStatement(query4)) {
                 stmt4.setInt(1, idMateriale);
                 stmt4.executeUpdate();
@@ -261,6 +261,7 @@ public class DataBaseManager {
             prestito.setDataScadenza(dataScadenza);
             prestito.setDataRestituzione(null);
             prestito.setRinnovato(false);
+            
             prestito.setPenale(0.0);
 
             Utente utente = getUtenteById(idUtente);
@@ -280,10 +281,7 @@ public class DataBaseManager {
     public List<Prestito> getPrestiti(int idUtente) throws Exception {
         List<Prestito> listaPrestiti = new ArrayList<>();
 
-        String query = "SELECT p.*, m.*, u.* FROM prestito p " +
-                       "JOIN materiale m ON p.id_materiale = m.id " +
-                       "JOIN utente u ON p.id_utente = u.id " +
-                       "WHERE p.id_utente = ?";
+        String query = "SELECT p.*, m.*, u.* FROM prestito p " + "JOIN materiale m ON p.mat_id = m.id_pz " + "JOIN utente u ON p.ut_id = u.id_ut " + "WHERE p.ut_id = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(query)) {
             stmt.setInt(1, idUtente);
@@ -292,44 +290,52 @@ public class DataBaseManager {
                 while (rs.next()) {
                     // Materiale (polimorfico)
                     Materiale materiale;
-                    String tipo = rs.getString("m.tipo");
+                    String tipo = rs.getString("tipo");
 
                     if ("LIBRO".equals(tipo)) {
                         Libro libro = new Libro();
-                        libro.setID_pz(rs.getInt("m.id"));
+                        libro.setID_pz(rs.getInt("id_pz"));
                         libro.setTitolo(rs.getString("titolo"));
                         libro.setAutore(rs.getString("autore"));
                         libro.setIsbn(rs.getString("isbn"));
-                        libro.setAnnoPubblicazione(rs.getInt("anno_pubblicazione"));
-                        libro.setDisponibile(rs.getBoolean("disponibile"));
+                        libro.setAnnoPubblicazione(rs.getInt("anno_pub"));
+                        libro.setDisponibile(rs.getBoolean("disp"));
                         materiale = libro;
                     } else {
                         Rivista rivista = new Rivista();
-                        rivista.setID_pz(rs.getInt("m.id"));
+                        rivista.setID_pz(rs.getInt("id_pz"));
                         rivista.setTitolo(rs.getString("titolo"));
                         rivista.setAutore(rs.getString("autore"));
-                        rivista.setNumeroEdizione(rs.getInt("numero_edizione"));
-                        rivista.setAnnoPubblicazione(rs.getInt("anno_pubblicazione"));
-                        rivista.setDisponibile(rs.getBoolean("disponibile"));
+                        rivista.setNumeroEdizione(rs.getInt("ed_num"));
+                        rivista.setAnnoPubblicazione(rs.getInt("anno_pub"));
+                        rivista.setDisponibile(rs.getBoolean("disp"));
                         materiale = rivista;
                     }
 
                     // Utente
                     Utente utente = new Utente();
-                    utente.setId_ut(rs.getInt("u.id"));
+                    utente.setId_ut(rs.getInt("id_ut"));
                     utente.setUsername(rs.getString("username"));
                     utente.setNome(rs.getString("nome"));
                     utente.setCognome(rs.getString("cognome"));
 
                     // Prestito
                     Prestito prestito = new Prestito();
-                    prestito.setId(rs.getInt("p.id"));
+                    prestito.setId(rs.getInt("prest_id"));
                     prestito.setUtente(utente);
                     prestito.setMateriale(materiale);
-                    prestito.setDataPrestito(rs.getDate("data_prestito").toLocalDate());
-                    prestito.setDataScadenza(rs.getDate("data_scadenza").toLocalDate());
 
-                    Date dataRest = rs.getDate("data_restituzione");
+                    Date dataPrest = rs.getDate("prest_data");
+                    if (dataPrest != null) {
+                        prestito.setDataPrestito(dataPrest.toLocalDate());
+                    }
+
+                    Date dataScad = rs.getDate("scad_data");
+                    if (dataScad != null) {
+                        prestito.setDataScadenza(dataScad.toLocalDate());
+                    }
+
+                    Date dataRest = rs.getDate("rest_data");
                     if (dataRest != null) {
                         prestito.setDataRestituzione(dataRest.toLocalDate());
                     }
@@ -351,9 +357,7 @@ public class DataBaseManager {
     // Restituisci materiale
     public double restituisciMateriale(int idPrestito, Configurazione config) throws Exception {
         try {
-            String query1 = "SELECT p.*, m.tipo FROM prestiti p " +
-                            "JOIN materiale m ON p.id_materiale = m.id " +
-                            "WHERE p.id = ?";
+            String query1 = "SELECT p.*, m.tipo FROM prestito p " + "JOIN materiale m ON p.mat_id = m.id_pz " + "WHERE p.prest_id = ?";
 
             LocalDate dataScadenza;
             int idMateriale;
@@ -366,12 +370,16 @@ public class DataBaseManager {
                         throw new PrestitoNonValido(idPrestito);
                     }
 
-                    if (rs.getDate("data_restituzione") != null) {
-                        throw new PrestitoNonValido(rs.getDate("data_restituzione"));
+                    if (rs.getDate("rest_data") != null) {
+                        throw new PrestitoNonValido(rs.getDate("rest_data"));
                     }
 
-                    dataScadenza = rs.getDate("data_scadenza").toLocalDate();
-                    idMateriale = rs.getInt("id_materiale");
+                    Date dataScadDb = rs.getDate("scad_data");
+                    if (dataScadDb == null) {
+                        throw new PrestitoNonValido(idPrestito);
+                    }
+                    dataScadenza = dataScadDb.toLocalDate();
+                    idMateriale = rs.getInt("mat_id");
                     tipo = rs.getString("tipo");
                 }
             }
@@ -389,7 +397,7 @@ public class DataBaseManager {
             }
 
             // STEP 3: Aggiorna prestito
-            String query2 = "UPDATE prestiti SET data_restituzione = ?, penale = ? WHERE id = ?";
+            String query2 = "UPDATE prestito SET rest_data = ?, penale = ? WHERE prest_id = ?";
             try (PreparedStatement stmt2 = connection.prepareStatement(query2)) {
                 stmt2.setDate(1, Date.valueOf(dataOggi));
                 stmt2.setDouble(2, penale);
@@ -398,7 +406,7 @@ public class DataBaseManager {
             }
 
             // STEP 4: Aggiorna disponibilità materiale
-            String query3 = "UPDATE materiale SET disponibile = TRUE WHERE id = ?";
+            String query3 = "UPDATE materiale SET disp = TRUE WHERE id_pz = ?";
             try (PreparedStatement stmt3 = connection.prepareStatement(query3)) {
                 stmt3.setInt(1, idMateriale);
                 stmt3.executeUpdate();
@@ -415,13 +423,10 @@ public class DataBaseManager {
     public LocalDate rinnovaPrestito(int idPrestito, Configurazione config) throws Exception {
         try {
             // STEP 1: Verifica prestito
-            String query1 = "SELECT p.*, m.tipo FROM prestiti p " +
-                            "JOIN materiale m ON p.id_materiale = m.id " +
-                            "WHERE p.id = ?";
+            String query1 = "SELECT p.*, m.tipo FROM prestito p " +"JOIN materiale m ON p.mat_id = m.id_pz " + "WHERE p.prest_id = ?";
 
             LocalDate dataScadenza;
             String tipo;
-            int idMateriale;
 
             try (PreparedStatement stmt1 = connection.prepareStatement(query1)) {
                 stmt1.setInt(1, idPrestito);
@@ -434,9 +439,12 @@ public class DataBaseManager {
                         throw new PrestitoGiaRinnovato(idPrestito);
                     }
 
-                    dataScadenza = rs.getDate("data_scadenza").toLocalDate();
+                    Date dataScadDb = rs.getDate("scad_data");
+                    if (dataScadDb == null) {
+                        throw new PrestitoNonValido(idPrestito);
+                    }
+                    dataScadenza = dataScadDb.toLocalDate();
                     tipo = rs.getString("tipo");
-                    idMateriale = rs.getInt("id_materiale");
                 }
             }
 
@@ -446,27 +454,14 @@ public class DataBaseManager {
                 throw new PrestitoInRitardo(idPrestito);
             }
 
-            // STEP 3: Verifica se ci sono prenotazioni in attesa
-            String query2 = "SELECT COUNT(*) as conteggio FROM prenotazioni " +
-                            "WHERE id_materiale = ? AND stato = 'ATTESA'";
-
-            try (PreparedStatement stmt2 = connection.prepareStatement(query2)) {
-                stmt2.setInt(1, idMateriale);
-                try (ResultSet rs2 = stmt2.executeQuery()) {
-                    if (rs2.next() && rs2.getInt("conteggio") > 0) {
-                        throw new MaterialeInPrestito(idMateriale);
-                    }
-                }
-            }
-
-            // STEP 4: Calcola nuova scadenza
+            // STEP 3: Calcola nuova scadenza
             int durataGiorni = "LIBRO".equals(tipo)
                     ? config.getDurataPrestitoLibro()
                     : config.getDurataPrestitoRivista();
             LocalDate nuovaScadenza = dataScadenza.plusDays(durataGiorni);
 
-            // STEP 5: Aggiorna prestito
-            String query3 = "UPDATE prestito SET data_scadenza = ?, rinnovato = TRUE WHERE id = ?";
+            // STEP 4: Aggiorna prestito
+            String query3 = "UPDATE prestito SET scad_data = ?, rinnovato = TRUE WHERE prest_id = ?";
             try (PreparedStatement stmt3 = connection.prepareStatement(query3)) {
                 stmt3.setDate(1, Date.valueOf(nuovaScadenza));
                 stmt3.setInt(2, idPrestito);
@@ -484,9 +479,7 @@ public class DataBaseManager {
 
     // Aggiungi materiale
     public int aggiungiMateriale(Materiale materiale) throws Exception {
-        String query = "INSERT INTO materiale " +
-                       "(tipo, titolo, autore, isbn, anno_pubblicazione, numero_edizione) " +
-                       "VALUES (?, ?, ?, ?, ?, ?)";
+        String query = "INSERT INTO materiale " + "(tipo, titolo, autore, isbn, anno_pub, ed_num) " + "VALUES (?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement stmt = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
             String tipo = (materiale instanceof Libro) ? "LIBRO" : "RIVISTA";
@@ -518,6 +511,7 @@ public class DataBaseManager {
             }
         } catch (SQLException e) {
             System.err.println("Errore aggiunta materiale: " + e.getMessage());
+            e.printStackTrace();  // DEBUG: mostra stack trace completo
             throw new Exception("Errore durante l'aggiunta del materiale", e);
         }
     }
@@ -526,7 +520,7 @@ public class DataBaseManager {
     public boolean rimuoviMateriale(int idMateriale) throws Exception {
         try {
             // STEP 1: Verifica se disponibile
-            String query1 = "SELECT disponibile FROM materiale WHERE id = ?";
+            String query1 = "SELECT disp FROM materiale WHERE id_pz = ?";
             boolean disponibile;
 
             try (PreparedStatement stmt1 = connection.prepareStatement(query1)) {
@@ -535,7 +529,7 @@ public class DataBaseManager {
                     if (!rs.next()) {
                         throw new MaterialeNonTrovato(idMateriale);
                     }
-                    disponibile = rs.getBoolean("disponibile");
+                    disponibile = rs.getBoolean("disp");
                 }
             }
 
@@ -544,7 +538,7 @@ public class DataBaseManager {
             }
 
             // STEP 2: Elimina materiale
-            String query2 = "DELETE FROM materiale WHERE id = ?";
+            String query2 = "DELETE FROM materiale WHERE id_pz = ?";
             try (PreparedStatement stmt2 = connection.prepareStatement(query2)) {
                 stmt2.setInt(1, idMateriale);
                 stmt2.executeUpdate();
@@ -561,47 +555,55 @@ public class DataBaseManager {
     public List<Prestito> getTuttiPrestiti() throws Exception {
         List<Prestito> listaPrestiti = new ArrayList<>();
 
-        String query = "SELECT p.*, m.*, u.* FROM prestito p " + "JOIN materiale m ON p.id_materiale = m.id " + "JOIN utente u ON p.id_utente = u.id";
+        String query = "SELECT p.*, m.*, u.* FROM prestito p " + "JOIN materiale m ON p.mat_id = m.id_pz " + "JOIN utente u ON p.ut_id = u.id_ut";
 
         try (PreparedStatement stmt = connection.prepareStatement(query);
             ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
                 Materiale materiale;
-                String tipo = rs.getString("m.tipo");
+                String tipo = rs.getString("tipo");
 
                 if ("LIBRO".equals(tipo)) {
                     Libro libro = new Libro();
-                    libro.setID_pz(rs.getInt("m.id"));
+                    libro.setID_pz(rs.getInt("id_pz"));
                     libro.setTitolo(rs.getString("titolo"));
                     libro.setAutore(rs.getString("autore"));
                     libro.setIsbn(rs.getString("isbn"));
-                    libro.setAnnoPubblicazione(rs.getInt("anno_pubblicazione"));
-                    libro.setDisponibile(rs.getBoolean("disponibile"));
+                    libro.setAnnoPubblicazione(rs.getInt("anno_pub"));
+                    libro.setDisponibile(rs.getBoolean("disp"));
                     materiale = libro;
                 } else {
                     Rivista rivista = new Rivista();
-                    rivista.setID_pz(rs.getInt("m.id"));
+                    rivista.setID_pz(rs.getInt("id_pz"));
                     rivista.setTitolo(rs.getString("titolo"));
                     rivista.setAutore(rs.getString("autore"));
-                    rivista.setNumeroEdizione(rs.getInt("numero_edizione"));
-                    rivista.setAnnoPubblicazione(rs.getInt("anno_pubblicazione"));
-                    rivista.setDisponibile(rs.getBoolean("disponibile"));
+                    rivista.setNumeroEdizione(rs.getInt("ed_num"));
+                    rivista.setAnnoPubblicazione(rs.getInt("anno_pub"));
+                    rivista.setDisponibile(rs.getBoolean("disp"));
                     materiale = rivista;
                 }
 
                 Utente utente = new Utente();
-                utente.setId_ut(rs.getInt("u.id"));
+                utente.setId_ut(rs.getInt("id_ut"));
                 utente.setUsername(rs.getString("username"));
 
                 Prestito prestito = new Prestito();
-                prestito.setId(rs.getInt("p.id"));
+                prestito.setId(rs.getInt("prest_id"));
                 prestito.setUtente(utente);
                 prestito.setMateriale(materiale);
-                prestito.setDataPrestito(rs.getDate("data_prestito").toLocalDate());
-                prestito.setDataScadenza(rs.getDate("data_scadenza").toLocalDate());
 
-                Date dataRest = rs.getDate("data_restituzione");
+                Date dataPrest = rs.getDate("prest_data");
+                if (dataPrest != null) {
+                    prestito.setDataPrestito(dataPrest.toLocalDate());
+                }
+
+                Date dataScad = rs.getDate("scad_data");
+                if (dataScad != null) {
+                    prestito.setDataScadenza(dataScad.toLocalDate());
+                }
+
+                Date dataRest = rs.getDate("rest_data");
                 if (dataRest != null) {
                     prestito.setDataRestituzione(dataRest.toLocalDate());
                 }
@@ -622,45 +624,54 @@ public class DataBaseManager {
     public List<Prestito> getPrestitiInRitardo() throws Exception {
         List<Prestito> listaPrestiti = new ArrayList<>();
 
-        String query = "SELECT p.*, m.*, u.* FROM prestiti p " + "JOIN materiale m ON p.id_materiale = m.id " + "JOIN utente u ON p.id_utente = u.id " + "WHERE p.data_scadenza < CURDATE() AND p.data_restituzione IS NULL";
+        String query = "SELECT p.*, m.*, u.* FROM prestito p " + "JOIN materiale m ON p.mat_id = m.id_pz " + "JOIN utente u ON p.ut_id = u.id_ut " + "WHERE p.scad_data < CURDATE() AND p.rest_data IS NULL";
 
         try (PreparedStatement stmt = connection.prepareStatement(query);
             ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
                 Materiale materiale;
-                String tipo = rs.getString("m.tipo");
+                String tipo = rs.getString("tipo");
 
                 if ("LIBRO".equals(tipo)) {
                     Libro libro = new Libro();
-                    libro.setID_pz(rs.getInt("m.id"));
+                    libro.setID_pz(rs.getInt("id_pz"));
                     libro.setTitolo(rs.getString("titolo"));
                     libro.setAutore(rs.getString("autore"));
                     libro.setIsbn(rs.getString("isbn"));
-                    libro.setAnnoPubblicazione(rs.getInt("anno_pubblicazione"));
-                    libro.setDisponibile(rs.getBoolean("disponibile"));
+                    libro.setAnnoPubblicazione(rs.getInt("anno_pub"));
+                    libro.setDisponibile(rs.getBoolean("disp"));
                     materiale = libro;
                 } else {
                     Rivista rivista = new Rivista();
-                    rivista.setID_pz(rs.getInt("m.id"));
+                    rivista.setID_pz(rs.getInt("id_pz"));
                     rivista.setTitolo(rs.getString("titolo"));
                     rivista.setAutore(rs.getString("autore"));
-                    rivista.setNumeroEdizione(rs.getInt("numero_edizione"));
-                    rivista.setAnnoPubblicazione(rs.getInt("anno_pubblicazione"));
-                    rivista.setDisponibile(rs.getBoolean("disponibile"));
+                    rivista.setNumeroEdizione(rs.getInt("ed_num"));
+                    rivista.setAnnoPubblicazione(rs.getInt("anno_pub"));
+                    rivista.setDisponibile(rs.getBoolean("disp"));
                     materiale = rivista;
                 }
 
                 Utente utente = new Utente();
-                utente.setId_ut(rs.getInt("u.id"));
+                utente.setId_ut(rs.getInt("id_ut"));
                 utente.setUsername(rs.getString("username"));
 
                 Prestito prestito = new Prestito();
-                prestito.setId(rs.getInt("p.id"));
+                prestito.setId(rs.getInt("prest_id"));
                 prestito.setUtente(utente);
                 prestito.setMateriale(materiale);
-                prestito.setDataPrestito(rs.getDate("data_prestito").toLocalDate());
-                prestito.setDataScadenza(rs.getDate("data_scadenza").toLocalDate());
+
+                Date dataPrest = rs.getDate("prest_data");
+                if (dataPrest != null) {
+                    prestito.setDataPrestito(dataPrest.toLocalDate());
+                }
+
+                Date dataScad = rs.getDate("scad_data");
+                if (dataScad != null) {
+                    prestito.setDataScadenza(dataScad.toLocalDate());
+                }
+
                 prestito.setPenale(rs.getDouble("penale"));
 
                 listaPrestiti.add(prestito);
@@ -677,19 +688,18 @@ public class DataBaseManager {
     public void bloccaUtente(int idUtente, boolean blocca) throws Exception {
         try {
             // STEP 1: Verifica che non sia admin
-            String query1 = "SELECT username, ruolo FROM utente WHERE id = ?";
+            String query1 = "SELECT username, ruolo FROM utente WHERE id_ut = ?";
             String ruolo;
             String username;
 
             try (PreparedStatement stmt1 = connection.prepareStatement(query1)) {
                 stmt1.setInt(1, idUtente);
                 try (ResultSet rs = stmt1.executeQuery()) {
+                    if (!rs.next()) {
+                        throw new UtenteNonTrovato("ID: " + idUtente);
+                    }
                     ruolo = rs.getString("ruolo");
                     username = rs.getString("username");
-                    if (!rs.next()) {
-                        throw new UtenteNonTrovato(username);
-                    }
-                    
                 }
             }
 
@@ -698,7 +708,7 @@ public class DataBaseManager {
             }
 
             // STEP 2: Blocca/Sblocca
-            String query2 = "UPDATE utente SET bloccato = ? WHERE id = ?";
+            String query2 = "UPDATE utente SET bloccato = ? WHERE id_ut = ?";
             try (PreparedStatement stmt2 = connection.prepareStatement(query2)) {
                 stmt2.setBoolean(1, blocca);
                 stmt2.setInt(2, idUtente);
@@ -714,17 +724,16 @@ public class DataBaseManager {
     // ==================== HELPER PRIVATI ====================
 
     private Utente getUtenteById(int idUtente) throws Exception {
-        String query = "SELECT * FROM utente WHERE id = ?";
+        String query = "SELECT * FROM utente WHERE id_ut = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(query)) {
             stmt.setInt(1, idUtente);
 
             try (ResultSet rs = stmt.executeQuery()) {
-                String username = rs.getString("username");
                 if (rs.next()) {
                     Utente utente = new Utente();
-                    utente.setId_ut(rs.getInt("id"));
-                    utente.setCodice_fiscale(rs.getString("codice_fiscale"));
+                    utente.setId_ut(rs.getInt("id_ut"));
+                    utente.setCodice_fiscale(rs.getString("cod_fiscale"));
                     utente.setUsername(rs.getString("username"));
                     utente.setNome(rs.getString("nome"));
                     utente.setCognome(rs.getString("cognome"));
@@ -734,7 +743,7 @@ public class DataBaseManager {
                     utente.setBloccato(rs.getBoolean("bloccato"));
                     return utente;
                 } else {
-                    throw new UtenteNonTrovato(username);
+                    throw new UtenteNonTrovato("ID: " + idUtente);
                 }
             }
         } catch (SQLException e) {
@@ -743,7 +752,7 @@ public class DataBaseManager {
     }
 
     private Materiale getMaterialeById(int idMateriale) throws Exception {
-        String query = "SELECT * FROM materiale WHERE id = ?";
+        String query = "SELECT * FROM materiale WHERE id_pz = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(query)) {
             stmt.setInt(1, idMateriale);
@@ -758,17 +767,17 @@ public class DataBaseManager {
                         libro.setTitolo(rs.getString("titolo"));
                         libro.setAutore(rs.getString("autore"));
                         libro.setIsbn(rs.getString("isbn"));
-                        libro.setAnnoPubblicazione(rs.getInt("anno_pubblicazione"));
-                        libro.setDisponibile(rs.getBoolean("disponibile"));
+                        libro.setAnnoPubblicazione(rs.getInt("anno_pub"));
+                        libro.setDisponibile(rs.getBoolean("disp"));
                         return libro;
                     } else if ("RIVISTA".equals(tipo)) {
                         Rivista rivista = new Rivista();
-                        rivista.setID_pz(rs.getInt("id"));
+                        rivista.setID_pz(rs.getInt("id_pz"));
                         rivista.setTitolo(rs.getString("titolo"));
                         rivista.setAutore(rs.getString("autore"));
-                        rivista.setNumeroEdizione(rs.getInt("numero_edizione"));
-                        rivista.setAnnoPubblicazione(rs.getInt("anno_pubblicazione"));
-                        rivista.setDisponibile(rs.getBoolean("disponibile"));
+                        rivista.setNumeroEdizione(rs.getInt("ed_num"));
+                        rivista.setAnnoPubblicazione(rs.getInt("anno_pub"));
+                        rivista.setDisponibile(rs.getBoolean("disp"));
                         return rivista;
                     } else {
                         throw new MaterialeNonTrovato(idMateriale);
