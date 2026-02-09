@@ -4,11 +4,11 @@ public class Rivista extends Materiale {
     private int numeroEdizione;
     private int annoPubblicazione;
     
-    // Costruttore vuoto
+    
     public Rivista() {
     }
     
-    // Getter e Setter per numeroEdizione
+    
     public int getNumeroEdizione() {
         return numeroEdizione;
     }
@@ -17,7 +17,7 @@ public class Rivista extends Materiale {
         this.numeroEdizione = numeroEdizione;
     }
     
-    // Getter e Setter per annoPubblicazione
+    
     public int getAnnoPubblicazione() {
         return annoPubblicazione;
     }
@@ -26,7 +26,7 @@ public class Rivista extends Materiale {
         this.annoPubblicazione = annoPubblicazione;
     }
     
-    // Implementazione metodi astratti
+    
     @Override
     public double calcolaPenale(int giorniRitardo, double penaleGiornaliera) {
         return giorniRitardo * penaleGiornaliera;

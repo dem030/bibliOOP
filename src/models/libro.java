@@ -4,11 +4,11 @@ public class Libro extends Materiale {
     private String isbn;
     private int annoPubblicazione;
     
-    // Costruttore vuoto
+    
     public Libro() {
     }
     
-    // Getter e Setter per isbn
+    
     public String getIsbn() {
         return isbn;
     }
@@ -17,7 +17,7 @@ public class Libro extends Materiale {
         this.isbn = isbn;
     }
     
-    // Getter e Setter per annoPubblicazione
+    
     public int getAnnoPubblicazione() {
         return annoPubblicazione;
     }
@@ -26,7 +26,6 @@ public class Libro extends Materiale {
         this.annoPubblicazione = annoPubblicazione;
     }
     
-    // Implementazione metodi astratti
     @Override
     public double calcolaPenale(int giorniRitardo, double penaleGiornaliera) {
         return giorniRitardo * penaleGiornaliera;

@@ -25,6 +25,7 @@ public abstract class Materiale {
     public boolean isDisponibile() {
         return disponibile;
     }
+    
     public void setDisponibile(boolean disponibile) {
         this.disponibile = disponibile;
     }

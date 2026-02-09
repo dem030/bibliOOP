@@ -50,7 +50,7 @@ public class ClientHandler implements Runnable {
                     out.flush();
 
                 } catch (IOException | ClassNotFoundException e) {
-                    // Client disconnesso, uscita silenziosa
+                    
                     break;
                 }
             }
@@ -62,9 +62,7 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    // =========================================================
-    // PROCESSA COMANDI
-    // =========================================================
+    
 
     private String processaComando(String comando) {
         try {
@@ -73,7 +71,7 @@ public class ClientHandler implements Runnable {
 
             switch (azione) {
 
-                // ===== UTENTE =====
+                // richieste utente
                 case "LOGIN":
                     return gestisciLogin(parti[1], parti[2]);
 
@@ -95,7 +93,7 @@ public class ClientHandler implements Runnable {
                 case "RINNOVA":
                     return gestisciRinnovo(Integer.parseInt(parti[1]));
 
-                // ===== ADMIN =====
+                // richieste admin
                 case "AGGIUNGI_MATERIALE":
                     return gestisciAggiungiMateriale(parti[1].split(";"));
 
@@ -123,10 +121,7 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    // =========================================================
-    // OPERAZIONI UTENTE
-    // =========================================================
-
+    // operazioni utente
     private String gestisciLogin(String username, String password) {
         try {
             utenteLoggato = dbManager.autenticaUtente(username, password);
@@ -241,13 +236,10 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    // =========================================================
-    // OPERAZIONI ADMIN
-    // =========================================================
 
+    // operazioni admin
     private boolean isAdmin() {
-        return utenteLoggato != null &&
-               utenteLoggato.getRuoloUtente() == Utente.ruoloUtente.ADMIN;
+        return utenteLoggato != null && utenteLoggato.getRuoloUtente() == Utente.ruoloUtente.ADMIN;
     }
 
     private String gestisciAggiungiMateriale(String[] dati) {
@@ -342,10 +334,8 @@ public class ClientHandler implements Runnable {
             return "ERRORE:" + e.getMessage();
         }
     }
-    // =========================================================
-    // SERIALIZZAZIONE & CHIUSURA
-    // =========================================================
-
+    
+    //serializzazione
     private String serializeUtente(Utente u) {
         return u.getId_ut() + ";" +
             u.getUsername() + ";" +
@@ -359,36 +349,22 @@ public class ClientHandler implements Runnable {
         String tipo = (m instanceof Libro) ? "LIBRO" : "RIVISTA";
         String disponibile = m.isDisponibile() ? "Si" : "No";
 
-        String result = "ID: " + m.getId_pz() + ";" +
-                       "Tipo: " + tipo + ";" +
-                       "Titolo: " + m.getTitolo() + ";" +
-                       "Autore: " + m.getAutore() + ";" +
-                       "Disponibile: " + disponibile + ";";
+        String result = "ID: " + m.getId_pz() + ";" + "Tipo: " + tipo + ";" + "Titolo: " + m.getTitolo() + ";" + "Autore: " + m.getAutore() + ";" + "Disponibile: " + disponibile + ";";
 
         if (m instanceof Libro) {
             Libro l = (Libro) m;
-            result += "ISBN: " + l.getIsbn() + ";" +
-                     "Anno: " + l.getAnnoPubblicazione();
+            result += "ISBN: " + l.getIsbn() + ";" + "Anno: " + l.getAnnoPubblicazione();
         } else {
             Rivista r = (Rivista) m;
-            result += "Num. Edizione: " + r.getNumeroEdizione() + ";" +
-                     "Anno: " + r.getAnnoPubblicazione();
+            result += "Num. Edizione: " + r.getNumeroEdizione() + ";" + "Anno: " + r.getAnnoPubblicazione();
         }
         return result;
     }
 
     private String serializePrestito(Prestito p) {
         String stato = (p.getDataRestituzione() != null) ? "RESTITUITO" : "IN CORSO";
-        return "ID Prestito: " + p.getId() + ";" +
-               "Utente: " + p.getUtente().getUsername() + " (ID: " + p.getUtente().getId_ut() + ");" +
-               "Materiale: " + p.getMateriale().getTitolo() + " (ID: " + p.getMateriale().getId_pz() + ");" +
-               "Data Prestito: " + p.getDataPrestito() + ";" +
-               "Data Scadenza: " + p.getDataScadenza() + ";" +
-               "Data Restituzione: " + (p.getDataRestituzione() != null ? p.getDataRestituzione() : "-") + ";" +
-               "Stato: " + stato + ";" +
-               "Penale: " + p.getPenale() + " EUR";
+        return "ID Prestito: " + p.getId() + ";" + "Utente: " + p.getUtente().getUsername() + " (ID: " + p.getUtente().getId_ut() + ");" + "Materiale: " + p.getMateriale().getTitolo() + " (ID: " + p.getMateriale().getId_pz() + ");" + "Data Prestito: " + p.getDataPrestito() + ";" + "Data Scadenza: " + p.getDataScadenza() + ";" + "Data Restituzione: " + (p.getDataRestituzione() != null ? p.getDataRestituzione() : "-") + ";" + "Stato: " + stato + ";" + "Penale: " + p.getPenale() + " EUR";
     }
-
     private void chiudiConnessione() {
         try {
             if (in != null) in.close();

@@ -19,7 +19,6 @@ public class DataBaseManager {
     private String dbPassword;
 
     private DataBaseManager() {
-        // costruttore privato
     }
 
     public static synchronized DataBaseManager getInstance() {
@@ -29,7 +28,7 @@ public class DataBaseManager {
         return instance;
     }
 
-    // ==================== INIT / CLOSE ====================
+    // inizializza connessione al DB
 
     public void inizializza(String url, String username, String password) throws Exception {
         try {
@@ -37,7 +36,7 @@ public class DataBaseManager {
             this.dbUsername = username;
             this.dbPassword = password;
 
-            Class.forName("com.mysql.cj.jdbc.Driver"); // driver MySQL [web:22][web:25]
+            Class.forName("com.mysql.cj.jdbc.Driver"); 
             connection = DriverManager.getConnection(dbUrl, dbUsername, dbPassword);
 
             System.out.println(" Connessione database stabilita");
@@ -61,9 +60,9 @@ public class DataBaseManager {
         }
     }
 
-    // ==================== OPERAZIONI UTENTE ====================
+    // richieste utente
 
-    // Registra utente
+    
     public int registraUtente(Utente utente) throws Exception {
     try {
         if (!utente.validaCodiceFiscale()) {
@@ -103,7 +102,6 @@ public class DataBaseManager {
     }
 }
 
-    // Autentica utente
     public Utente autenticaUtente(String username, String password) throws Exception {
         String query = "SELECT * FROM utente WHERE username = ? AND password = ?";
 
@@ -140,7 +138,6 @@ public class DataBaseManager {
         }
     }
 
-    // Cerca materiale
     public List<Materiale> cercaMateriale(String query) throws Exception {
     List<Materiale> listaMateriali = new ArrayList<>();
     
@@ -189,7 +186,7 @@ public class DataBaseManager {
     }
 }
 
-    // Prenota materiale (synchronized per evitare race condition)
+    
     public synchronized Prestito prenotaMateriale(int idUtente, int idMateriale, Configurazione config) throws Exception {
         try {
             // STEP 1: Verifica disponibilità materiale
@@ -209,7 +206,6 @@ public class DataBaseManager {
                 }
             }
 
-            // STEP 2: Verifica limite prestiti utente
             String query2 = "SELECT COUNT(*) as conteggio FROM prestito WHERE ut_id = ? AND rest_data IS NULL";
 
             try (PreparedStatement stmt2 = connection.prepareStatement(query2)) {
@@ -223,13 +219,11 @@ public class DataBaseManager {
                     }
                 }
             }
-
-            // STEP 3: Calcola date
+            
             LocalDate dataOggi = LocalDate.now();
             int durataGiorni = "LIBRO".equals(tipo) ? config.getDurataPrestitoLibro() : config.getDurataPrestitoRivista();
             LocalDate dataScadenza = dataOggi.plusDays(durataGiorni);
 
-            // STEP 4: Inserisci prestito
             String query3 = "INSERT INTO prestito (ut_id, mat_id,prest_data, scad_data) VALUES (?, ?, ?, ?)";
             int idPrestito = 0;
 
@@ -247,14 +241,12 @@ public class DataBaseManager {
                 }
             }
 
-            // STEP 5: Aggiorna disponibilità
             String query4 = "UPDATE materiale SET disp = FALSE WHERE id_pz = ?";
             try (PreparedStatement stmt4 = connection.prepareStatement(query4)) {
                 stmt4.setInt(1, idMateriale);
                 stmt4.executeUpdate();
             }
 
-            // STEP 6: Crea oggetto Prestito da ritornare
             Prestito prestito = new Prestito();
             prestito.setId(idPrestito);
             prestito.setDataPrestito(dataOggi);
@@ -277,7 +269,6 @@ public class DataBaseManager {
         }
     }
 
-    // Get prestiti utente
     public List<Prestito> getPrestiti(int idUtente) throws Exception {
         List<Prestito> listaPrestiti = new ArrayList<>();
 
@@ -288,7 +279,6 @@ public class DataBaseManager {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    // Materiale (polimorfico)
                     Materiale materiale;
                     String tipo = rs.getString("tipo");
 
@@ -312,14 +302,12 @@ public class DataBaseManager {
                         materiale = rivista;
                     }
 
-                    // Utente
                     Utente utente = new Utente();
                     utente.setId_ut(rs.getInt("id_ut"));
                     utente.setUsername(rs.getString("username"));
                     utente.setNome(rs.getString("nome"));
                     utente.setCognome(rs.getString("cognome"));
 
-                    // Prestito
                     Prestito prestito = new Prestito();
                     prestito.setId(rs.getInt("prest_id"));
                     prestito.setUtente(utente);
@@ -354,7 +342,6 @@ public class DataBaseManager {
         }
     }
 
-    // Restituisci materiale
     public double restituisciMateriale(int idPrestito, Configurazione config) throws Exception {
         try {
             String query1 = "SELECT p.*, m.tipo FROM prestito p " + "JOIN materiale m ON p.mat_id = m.id_pz " + "WHERE p.prest_id = ?";
@@ -383,8 +370,7 @@ public class DataBaseManager {
                     tipo = rs.getString("tipo");
                 }
             }
-
-            // STEP 2: Calcola penale se in ritardo
+            // se ritardo, calcolo penale
             LocalDate dataOggi = LocalDate.now();
             long giorniRitardo = java.time.temporal.ChronoUnit.DAYS.between(dataScadenza, dataOggi);
             double penale = 0.0;
@@ -396,7 +382,6 @@ public class DataBaseManager {
                 penale = giorniRitardo * penaleGiornaliera;
             }
 
-            // STEP 3: Aggiorna prestito
             String query2 = "UPDATE prestito SET rest_data = ?, penale = ? WHERE prest_id = ?";
             try (PreparedStatement stmt2 = connection.prepareStatement(query2)) {
                 stmt2.setDate(1, Date.valueOf(dataOggi));
@@ -405,7 +390,6 @@ public class DataBaseManager {
                 stmt2.executeUpdate();
             }
 
-            // STEP 4: Aggiorna disponibilità materiale
             String query3 = "UPDATE materiale SET disp = TRUE WHERE id_pz = ?";
             try (PreparedStatement stmt3 = connection.prepareStatement(query3)) {
                 stmt3.setInt(1, idMateriale);
@@ -422,12 +406,9 @@ public class DataBaseManager {
     // Rinnova prestito
     public LocalDate rinnovaPrestito(int idPrestito, Configurazione config) throws Exception {
         try {
-            // STEP 1: Verifica prestito
             String query1 = "SELECT p.*, m.tipo FROM prestito p " +"JOIN materiale m ON p.mat_id = m.id_pz " + "WHERE p.prest_id = ?";
-
             LocalDate dataScadenza;
             String tipo;
-
             try (PreparedStatement stmt1 = connection.prepareStatement(query1)) {
                 stmt1.setInt(1, idPrestito);
                 try (ResultSet rs = stmt1.executeQuery()) {
@@ -448,19 +429,19 @@ public class DataBaseManager {
                 }
             }
 
-            // STEP 2: Verifica se in ritardo
+            // una volta verificato prestito, controllo ritardo
             LocalDate dataOggi = LocalDate.now();
             if (dataOggi.isAfter(dataScadenza)) {
                 throw new PrestitoInRitardo(idPrestito);
             }
 
-            // STEP 3: Calcola nuova scadenza
+            // calcolo rinnovo
             int durataGiorni = "LIBRO".equals(tipo)
                     ? config.getDurataPrestitoLibro()
                     : config.getDurataPrestitoRivista();
             LocalDate nuovaScadenza = dataScadenza.plusDays(durataGiorni);
 
-            // STEP 4: Aggiorna prestito
+            // aggiornamento
             String query3 = "UPDATE prestito SET scad_data = ?, rinnovato = TRUE WHERE prest_id = ?";
             try (PreparedStatement stmt3 = connection.prepareStatement(query3)) {
                 stmt3.setDate(1, Date.valueOf(nuovaScadenza));
@@ -475,9 +456,9 @@ public class DataBaseManager {
         }
     }
 
-    // ==================== OPERAZIONI ADMIN ====================
+    // richieste admin
 
-    // Aggiungi materiale
+    
     public int aggiungiMateriale(Materiale materiale) throws Exception {
         String query = "INSERT INTO materiale " + "(tipo, titolo, autore, isbn, anno_pub, ed_num) " + "VALUES (?, ?, ?, ?, ?, ?)";
 
@@ -516,13 +497,10 @@ public class DataBaseManager {
         }
     }
 
-    // Rimuovi materiale
     public boolean rimuoviMateriale(int idMateriale) throws Exception {
         try {
-            // STEP 1: Verifica se disponibile
             String query1 = "SELECT disp FROM materiale WHERE id_pz = ?";
             boolean disponibile;
-
             try (PreparedStatement stmt1 = connection.prepareStatement(query1)) {
                 stmt1.setInt(1, idMateriale);
                 try (ResultSet rs = stmt1.executeQuery()) {
@@ -532,26 +510,20 @@ public class DataBaseManager {
                     disponibile = rs.getBoolean("disp");
                 }
             }
-
             if (!disponibile) {
                 throw new MaterialeInPrestito(idMateriale);
             }
-
-            // STEP 2: Elimina materiale
             String query2 = "DELETE FROM materiale WHERE id_pz = ?";
             try (PreparedStatement stmt2 = connection.prepareStatement(query2)) {
                 stmt2.setInt(1, idMateriale);
                 stmt2.executeUpdate();
             }
-
             return true;
         } catch (SQLException e) {
             System.err.println("Errore rimozione materiale: " + e.getMessage());
             throw new Exception("Errore durante la rimozione del materiale", e);
         }
     }
-
-    // Get tutti i prestiti
     public List<Prestito> getTuttiPrestiti() throws Exception {
         List<Prestito> listaPrestiti = new ArrayList<>();
 
@@ -583,33 +555,26 @@ public class DataBaseManager {
                     rivista.setDisponibile(rs.getBoolean("disp"));
                     materiale = rivista;
                 }
-
                 Utente utente = new Utente();
                 utente.setId_ut(rs.getInt("id_ut"));
                 utente.setUsername(rs.getString("username"));
-
                 Prestito prestito = new Prestito();
                 prestito.setId(rs.getInt("prest_id"));
                 prestito.setUtente(utente);
                 prestito.setMateriale(materiale);
-
                 Date dataPrest = rs.getDate("prest_data");
                 if (dataPrest != null) {
                     prestito.setDataPrestito(dataPrest.toLocalDate());
                 }
-
                 Date dataScad = rs.getDate("scad_data");
                 if (dataScad != null) {
                     prestito.setDataScadenza(dataScad.toLocalDate());
                 }
-
                 Date dataRest = rs.getDate("rest_data");
                 if (dataRest != null) {
                     prestito.setDataRestituzione(dataRest.toLocalDate());
                 }
-
                 prestito.setPenale(rs.getDouble("penale"));
-
                 listaPrestiti.add(prestito);
             }
 
@@ -620,7 +585,6 @@ public class DataBaseManager {
         }
     }
 
-    // Get prestiti in ritardo
     public List<Prestito> getPrestitiInRitardo() throws Exception {
         List<Prestito> listaPrestiti = new ArrayList<>();
 
@@ -652,31 +616,24 @@ public class DataBaseManager {
                     rivista.setDisponibile(rs.getBoolean("disp"));
                     materiale = rivista;
                 }
-
                 Utente utente = new Utente();
                 utente.setId_ut(rs.getInt("id_ut"));
                 utente.setUsername(rs.getString("username"));
-
                 Prestito prestito = new Prestito();
                 prestito.setId(rs.getInt("prest_id"));
                 prestito.setUtente(utente);
                 prestito.setMateriale(materiale);
-
                 Date dataPrest = rs.getDate("prest_data");
                 if (dataPrest != null) {
                     prestito.setDataPrestito(dataPrest.toLocalDate());
                 }
-
                 Date dataScad = rs.getDate("scad_data");
                 if (dataScad != null) {
                     prestito.setDataScadenza(dataScad.toLocalDate());
                 }
-
                 prestito.setPenale(rs.getDouble("penale"));
-
                 listaPrestiti.add(prestito);
             }
-
             return listaPrestiti;
         } catch (SQLException e) {
             System.err.println("Errore: " + e.getMessage());
@@ -684,10 +641,9 @@ public class DataBaseManager {
         }
     }
 
-    // Blocca/Sblocca utente
+    
     public void bloccaUtente(int idUtente, boolean blocca) throws Exception {
         try {
-            // STEP 1: Verifica che non sia admin
             String query1 = "SELECT username, ruolo FROM utente WHERE id_ut = ?";
             String ruolo;
             String username;
@@ -707,7 +663,7 @@ public class DataBaseManager {
                 throw new OperazioneNonConsentitaException("Non puoi bloccare un amministratore");
             }
 
-            // STEP 2: Blocca/Sblocca
+            // una volta verificato se admin, set bloccato
             String query2 = "UPDATE utente SET bloccato = ? WHERE id_ut = ?";
             try (PreparedStatement stmt2 = connection.prepareStatement(query2)) {
                 stmt2.setBoolean(1, blocca);
@@ -721,8 +677,7 @@ public class DataBaseManager {
         }
     }
 
-    // ==================== HELPER PRIVATI ====================
-
+    // metodi recupero dati
     private Utente getUtenteById(int idUtente) throws Exception {
         String query = "SELECT * FROM utente WHERE id_ut = ?";
 

@@ -23,13 +23,10 @@ public class Main {
             System.out.println("==========================================");
             System.out.println();
             
-            // STEP 1: Avvio automatico del server in background
             avviaServerBackground();
             
-            // Attendi un attimo che il server si avvii
             Thread.sleep(1000);
             
-            // STEP 2: Menu principale
             boolean continua = true;
             while (continua) {
                 System.out.println();
@@ -75,17 +72,15 @@ public class Main {
         }
     }
     
-    // Avvia server in background
     private static void avviaServerBackground() {
         Thread serverThread = new Thread(() -> {
             try {
                 System.out.println("Avvio server in background...");
-                
-                // Leggi configurazione
+                //configurazione
                 config = XMLConfigParser.leggiConfigurazione("config/config.xml");
                 System.out.println(" Configurazione caricata");
                 
-                // Inizializza database
+                // db
                 DataBaseManager dbManager = DataBaseManager.getInstance();
                 dbManager.inizializza(
                     config.getDbUrl(),
@@ -94,22 +89,21 @@ public class Main {
                 );
                 System.out.println(" Database connesso");
                 
-                // Crea ThreadPool
                 threadPool = Executors.newFixedThreadPool(config.getMaxThread());
                 System.out.println(" ThreadPool creato");
                 
-                // Avvia ServerSocket
+                
                 serverSocket = new ServerSocket(config.getPortaServer());
                 serverAvviato = true;
                 System.out.println(" Server avviato sulla porta " + config.getPortaServer());
                 System.out.println();
                 
-                // Loop accettazione client (in background)
+                
                 while (serverAvviato) {
                     try {
                         Socket clientSocket = serverSocket.accept();
                         
-                        // Crea handler (lo implementeremo dopo)
+                        
                         ClientHandler handler = new ClientHandler(clientSocket, config);
                         threadPool.submit(handler);
                         
@@ -126,11 +120,10 @@ public class Main {
             }
         });
         
-        serverThread.setDaemon(true); // Thread demone, si chiude con il main
+        serverThread.setDaemon(true); 
         serverThread.start();
     }
     
-    // Accedi come utente
     private static void accediUtente() {
         Scanner scanner = new Scanner(System.in);
         
@@ -143,7 +136,6 @@ public class Main {
             System.out.print("Password: ");
             String password = scanner.nextLine();
             
-            // Connessione al server locale
             Socket socket = new Socket("localhost", config.getPortaServer());
             ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
             out.flush();
@@ -154,14 +146,11 @@ public class Main {
             out.writeObject(comando);
             out.flush();
             
-            // Ricevi risposta
             String risposta = (String) in.readObject();
             
             if (risposta.startsWith("OK:")) {
                 System.out.println(" Login effettuato!");
                 System.out.println();
-                
-                // Avvia sessione utente
                 sessioneUtente(socket, out, in, username);
                 
             } else {
@@ -173,9 +162,10 @@ public class Main {
         } catch (Exception e) {
             System.err.println("Errore: " + e.getMessage());
         }
+        scanner.close();
     }
     
-    // Sessione utente
+    
     private static void sessioneUtente(Socket socket, ObjectOutputStream out, ObjectInputStream in, String username) {
         Scanner scanner = new Scanner(System.in);
         boolean inSessione = true;
@@ -201,38 +191,38 @@ public class Main {
                 String comando = "";
                 
                 switch (scelta) {
-                    case 1: // Cerca
+                    case 1: 
                         System.out.print("Inserisci titolo o autore: ");
                         String query = scanner.nextLine();
                         comando = "CERCA_MATERIALE:" + query;
                         break;
                         
-                    case 2: // Prenota
+                    case 2: 
                         System.out.print("Inserisci ID materiale: ");
                         int idMat = scanner.nextInt();
                         scanner.nextLine();
                         comando = "PRENOTA_MATERIALE:" + idMat;
                         break;
                         
-                    case 3: // Visualizza prestiti
+                    case 3: 
                         comando = "VISUALIZZA_PRESTITI";
                         break;
                         
-                    case 4: // Restituisci
+                    case 4: 
                         System.out.print("Inserisci ID prestito: ");
                         int idPrest = scanner.nextInt();
                         scanner.nextLine();
                         comando = "RESTITUISCI:" + idPrest;
                         break;
                         
-                    case 5: // Rinnova
+                    case 5: 
                         System.out.print("Inserisci ID prestito: ");
                         int idRinn = scanner.nextInt();
                         scanner.nextLine();
                         comando = "RINNOVA:" + idRinn;
                         break;
                         
-                    case 0: // Logout
+                    case 0: 
                         comando = "EXIT";
                         inSessione = false;
                         break;
@@ -242,12 +232,11 @@ public class Main {
                         continue;
                 }
                 
-                // Invia comando
+                
                 out.writeObject(comando);
                 out.flush();
                 
                 if (!comando.equals("EXIT")) {
-                    // Ricevi e mostra risposta
                     String risposta = (String) in.readObject();
                     mostraRisposta(risposta);
                 }
@@ -259,9 +248,10 @@ public class Main {
         } catch (Exception e) {
             System.err.println("Errore: " + e.getMessage());
         }
+        scanner.close();
     }
     
-    // Accedi come admin
+    
     private static void accediAdmin() {
         Scanner scanner = new Scanner(System.in);
         
@@ -274,18 +264,18 @@ public class Main {
             System.out.print("Password: ");
             String password = scanner.nextLine();
             
-            // Connessione al server locale
+            
             Socket socket = new Socket("localhost", config.getPortaServer());
             ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
             out.flush();
             ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
             
-            // Invia comando login
+            
             String comando = "LOGIN:" + username + ":" + password;
             out.writeObject(comando);
             out.flush();
             
-            // Ricevi risposta
+            
             String risposta = (String) in.readObject();
             
             if (risposta.startsWith("OK:")) {
@@ -302,8 +292,6 @@ public class Main {
                 
                 System.out.println(" Login amministratore effettuato!");
                 System.out.println();
-                
-                // Avvia sessione admin
                 sessioneAdmin(socket, out, in, username);
                 
             } else {
@@ -315,9 +303,9 @@ public class Main {
         } catch (Exception e) {
             System.err.println("Errore: " + e.getMessage());
         }
+        scanner.close();
     }
     
-    // Sessione admin
     private static void sessioneAdmin(Socket socket, ObjectOutputStream out, ObjectInputStream in, String username) {
         Scanner scanner = new Scanner(System.in);
         boolean inSessione = true;
@@ -344,7 +332,7 @@ public class Main {
                 String comando = "";
                 
                 switch (scelta) {
-                    case 1: // Aggiungi materiale
+                    case 1: 
                         System.out.println("Tipo (1=Libro, 2=Rivista): ");
                         int tipo = scanner.nextInt();
                         scanner.nextLine();
@@ -371,22 +359,22 @@ public class Main {
                         comando = "AGGIUNGI_MATERIALE:" + tipoStr + ";" + titolo + ";" + autore + ";" + campo3 + ";" + anno;
                         break;
                         
-                    case 2: // Rimuovi materiale
+                    case 2: 
                         System.out.print("ID materiale: ");
                         int idMat = scanner.nextInt();
                         scanner.nextLine();
                         comando = "RIMUOVI_MATERIALE:" + idMat;
                         break;
                         
-                    case 3: // Tutti i prestiti
+                    case 3: 
                         comando = "TUTTI_PRESTITI";
                         break;
                         
-                    case 4: // Prestiti in ritardo
+                    case 4: 
                         comando = "PRESTITI_RITARDO";
                         break;
                         
-                    case 5: // Blocca utente
+                    case 5: 
                         System.out.print("ID utente: ");
                         int idUt = scanner.nextInt();
                         scanner.nextLine();
@@ -398,13 +386,13 @@ public class Main {
                         comando = "BLOCCA_UTENTE:" + idUt + ":" + blocca;
                         break;
                         
-                    case 6: // Cerca
+                    case 6: 
                         System.out.print("Cerca: ");
                         String query = scanner.nextLine();
                         comando = "CERCA_MATERIALE:" + query;
                         break;
                         
-                    case 0: // Logout
+                    case 0: 
                         comando = "EXIT";
                         inSessione = false;
                         break;
@@ -414,12 +402,10 @@ public class Main {
                         continue;
                 }
                 
-                // Invia comando
                 out.writeObject(comando);
                 out.flush();
                 
                 if (!comando.equals("EXIT")) {
-                    // Ricevi e mostra risposta
                     String risposta = (String) in.readObject();
                     mostraRisposta(risposta);
                 }
@@ -431,10 +417,8 @@ public class Main {
         } catch (Exception e) {
             System.err.println("Errore: " + e.getMessage());
         }
+        scanner.close();
     }
-    
-    // 3
-    // istrazione nuovo utente
     private static void registrazioneNuovoUtente() {
         Scanner scanner = new Scanner(System.in);
         
@@ -467,7 +451,6 @@ public class Main {
             System.out.print("Telefono: ");
             String telefono = scanner.nextLine();
 
-            // Validazione email e telefono
             models.Utente tempUtente = new models.Utente();
             tempUtente.setEmail(email);
             tempUtente.setTelefono(telefono);
@@ -481,21 +464,14 @@ public class Main {
                 System.out.println(" Telefono non valido (9-15 cifre, può iniziare con +)");
                 return;
             }
-
-            // Connessione al server
             Socket socket = new Socket("localhost", config.getPortaServer());
             ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
             out.flush();
             ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
-            
-            // Invia comando registrazione
             String comando = "REGISTRAZIONE:" + cf + ";" + username + ";" + password + ";" +  nome + ";" + cognome + ";" + email + ";" + telefono;
             out.writeObject(comando);
             out.flush();
-            
-            // Ricevi risposta
             String risposta = (String) in.readObject();
-            
             if (risposta.startsWith("OK:")) {
                 System.out.println(" Registrazione completata!");
                 System.out.println("Ora puoi effettuare il login come utente");
@@ -503,22 +479,21 @@ public class Main {
                 String errore = risposta.substring(7);
                 System.out.println(" Registrazione fallita: " + errore);
             }
-            
             socket.close();
             
         } catch (Exception e) {
             System.err.println("Errore: " + e.getMessage());
         }
+        scanner.close();
     }
     
-    // Mostra risposta dal server
     private static void mostraRisposta(String risposta) {
         System.out.println();
         
         if (risposta.startsWith("OK:")) {
             String dati = risposta.substring(3);
             
-            // Se contiene || è una lista
+            //verifica se lista
             if (dati.contains("||")) {
                 String[] elementi = dati.split("\\|\\|");
                 System.out.println("Risultati trovati: " + elementi.length);
@@ -526,7 +501,6 @@ public class Main {
                 
                 for (String elemento : elementi) {
                     String[] parti = elemento.split(";");
-                    // Stampa formattata base
                     for (int i = 0; i < parti.length; i++) {
                         System.out.println(parti[i]);
                     }
@@ -541,8 +515,6 @@ public class Main {
             System.out.println(" " + errore);
         }
     }
-    
-    // Chiudi server
     private static void chiudiServer() {
         try {
             serverAvviato = false;
