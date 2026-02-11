@@ -8,14 +8,15 @@ import utils.*;
 import server.*;
 
 public class Main {
-    
+
     private static ServerSocket serverSocket;
     private static ExecutorService threadPool;
     private static Configurazione config;
     private static boolean serverAvviato = false;
+    private static Scanner scanner;
     
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
+        scanner = new Scanner(System.in);
         
         try {
             System.out.println("==========================================");
@@ -125,8 +126,6 @@ public class Main {
     }
     
     private static void accediUtente() {
-        Scanner scanner = new Scanner(System.in);
-        
         try {
             System.out.println();
             System.out.println("=== LOGIN UTENTE ===");
@@ -162,12 +161,9 @@ public class Main {
         } catch (Exception e) {
             System.err.println("Errore: " + e.getMessage());
         }
-        scanner.close();
     }
-    
-    
+
     private static void sessioneUtente(Socket socket, ObjectOutputStream out, ObjectInputStream in, String username) {
-        Scanner scanner = new Scanner(System.in);
         boolean inSessione = true;
         
         try {
@@ -248,13 +244,9 @@ public class Main {
         } catch (Exception e) {
             System.err.println("Errore: " + e.getMessage());
         }
-        scanner.close();
     }
-    
-    
+
     private static void accediAdmin() {
-        Scanner scanner = new Scanner(System.in);
-        
         try {
             System.out.println();
             System.out.println("=== LOGIN AMMINISTRATORE ===");
@@ -303,11 +295,9 @@ public class Main {
         } catch (Exception e) {
             System.err.println("Errore: " + e.getMessage());
         }
-        scanner.close();
     }
-    
+
     private static void sessioneAdmin(Socket socket, ObjectOutputStream out, ObjectInputStream in, String username) {
-        Scanner scanner = new Scanner(System.in);
         boolean inSessione = true;
         
         try {
@@ -417,11 +407,9 @@ public class Main {
         } catch (Exception e) {
             System.err.println("Errore: " + e.getMessage());
         }
-        scanner.close();
     }
+
     private static void registrazioneNuovoUtente() {
-        Scanner scanner = new Scanner(System.in);
-        
         try {
             System.out.println();
             System.out.println("=== REGISTRAZIONE NUOVO UTENTE ===");
@@ -484,9 +472,8 @@ public class Main {
         } catch (Exception e) {
             System.err.println("Errore: " + e.getMessage());
         }
-        scanner.close();
     }
-    
+
     private static void mostraRisposta(String risposta) {
         System.out.println();
         
