@@ -40,10 +40,17 @@ public class Main {
                 System.out.println("0. Esci");
                 System.out.println("==========================================");
                 System.out.print("Scelta: ");
-                
-                int scelta = scanner.nextInt();
-                scanner.nextLine();
-                
+
+                int scelta;
+                try {
+                    scelta = scanner.nextInt();
+                    scanner.nextLine();
+                } catch (java.util.InputMismatchException e) {
+                    scanner.nextLine();
+                    System.out.println("Scelta non valida, riprovare");
+                    continue;
+                }
+
                 switch (scelta) {
                     case 1:
                         accediUtente();
@@ -73,12 +80,34 @@ public class Main {
         }
     }
     
+    private static boolean serverAttivo(int porta) {
+        try (ServerSocket test = new ServerSocket(porta)) {
+            return false; // bind riuscito = porta libera, server NON attivo
+        } catch (IOException e) {
+            return true; // bind fallito = porta già in uso, server attivo
+        }
+    }
+
     private static void avviaServerBackground() {
+        
+        try {
+            config = XMLConfigParser.leggiConfigurazione("config/config.xml");
+        } catch (Exception e) {
+            System.err.println("Errore caricamento configurazione: " + e.getMessage());
+            return;
+        }
+
+        
+        if (serverAttivo(config.getPortaServer())) {
+            System.out.println(" Server già attivo sulla porta " + config.getPortaServer());
+            System.out.println(" Avvio in modalità SOLO CLIENT");
+            serverAvviato = true;
+            return;
+        }
+
         Thread serverThread = new Thread(() -> {
             try {
                 System.out.println("Avvio server in background...");
-                //configurazione
-                config = XMLConfigParser.leggiConfigurazione("config/config.xml");
                 System.out.println(" Configurazione caricata");
                 
                 // db
@@ -180,14 +209,21 @@ public class Main {
                 System.out.println("0. Logout");
                 System.out.println("========================================");
                 System.out.print("Scelta: ");
-                
-                int scelta = scanner.nextInt();
-                scanner.nextLine();
-                
+
+                int scelta;
+                try {
+                    scelta = scanner.nextInt();
+                    scanner.nextLine();
+                } catch (java.util.InputMismatchException e) {
+                    scanner.nextLine();
+                    System.out.println("Scelta non valida, riprovare");
+                    continue;
+                }
+
                 String comando = "";
-                
+
                 switch (scelta) {
-                    case 1: 
+                    case 1:
                         System.out.print("Inserisci titolo o autore: ");
                         String query = scanner.nextLine();
                         comando = "CERCA_MATERIALE:" + query;
@@ -315,14 +351,21 @@ public class Main {
                 System.out.println("0. Logout");
                 System.out.println("========================================");
                 System.out.print("Scelta: ");
-                
-                int scelta = scanner.nextInt();
-                scanner.nextLine();
-                
+
+                int scelta;
+                try {
+                    scelta = scanner.nextInt();
+                    scanner.nextLine();
+                } catch (java.util.InputMismatchException e) {
+                    scanner.nextLine();
+                    System.out.println("Scelta non valida, riprovare");
+                    continue;
+                }
+
                 String comando = "";
-                
+
                 switch (scelta) {
-                    case 1: 
+                    case 1:
                         System.out.println("Tipo (1=Libro, 2=Rivista): ");
                         int tipo = scanner.nextInt();
                         scanner.nextLine();

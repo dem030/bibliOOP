@@ -40,8 +40,7 @@ public class ClientHandler implements Runnable {
                 try {
                     String comando = (String) in.readObject();
 
-                    if (comando == null || comando.equals("EXIT") && utenteLoggato != null)  {
-                        System.out.println("Client disconnesso");
+                    if (comando == null || comando.equals("EXIT"))  {
                         break;
                     }
 
@@ -50,7 +49,6 @@ public class ClientHandler implements Runnable {
                     out.flush();
 
                 } catch (IOException | ClassNotFoundException e) {
-                    
                     break;
                 }
             }

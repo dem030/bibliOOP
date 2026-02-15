@@ -90,7 +90,6 @@ public class Utente{
         if (this.email == null || this.email.isEmpty()) {
             return false;
         }
-        // Controlla formato base: qualcosa@qualcosa.qualcosa
         int atIndex = this.email.indexOf('@');
         if (atIndex <= 0) {
             return false;
@@ -106,13 +105,10 @@ public class Utente{
         if (this.telefono == null || this.telefono.isEmpty()) {
             return false;
         }
-        // Rimuovi spazi e trattini
         String tel = this.telefono.replaceAll("[\\s-]", "");
-        // Può iniziare con +
         if (tel.startsWith("+")) {
             tel = tel.substring(1);
         }
-        // Deve contenere solo cifre e avere lunghezza 9-15
         if (tel.length() < 9 || tel.length() > 15) {
             return false;
         }

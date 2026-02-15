@@ -78,8 +78,8 @@ public class DataBaseManager {
         stmt.setString(4, utente.getNome());
         stmt.setString(5, utente.getCognome());
         stmt.setString(6, utente.getEmail());
-        stmt.setLong(7, Long.parseLong(utente.getTelefono())); // telefono è BIGINT nel DB
-        stmt.setString(8, "USER"); // ✅ USER non UTENTE
+        stmt.setLong(7, Long.parseLong(utente.getTelefono()));
+        stmt.setString(8, "USER"); 
         
         stmt.executeUpdate();
         
@@ -189,7 +189,7 @@ public class DataBaseManager {
     
     public synchronized Prestito prenotaMateriale(int idUtente, int idMateriale, Configurazione config) throws Exception {
         try {
-            // STEP 1: Verifica disponibilità materiale
+            
             String query1 = "SELECT * FROM materiale WHERE id_pz = ?";
             String tipo;
 

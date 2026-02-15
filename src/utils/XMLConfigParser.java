@@ -5,7 +5,6 @@ import java.io.File;
 
 public class XMLConfigParser {
     public static Configurazione leggiConfigurazione(String filepath) throws Exception {
-    // Parse del file XML
     File xmlFile = new File(filepath);
     DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
     DocumentBuilder builder = factory.newDocumentBuilder();
